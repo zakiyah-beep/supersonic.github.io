@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>SUPERSONIC STORE — PS4 GoldHEN</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  min-height:100%;background:#050914;color:#e2eaf5;
+  font-family:'Courier New',Courier,monospace;
+  text-align:center;overflow-x:hidden;overflow-y:auto;
+}
+h1{color:#e2eaf5;text-shadow:none;font-size:inherit;font-weight:normal;}
+a{text-decoration:none;}
+
+/* ── Grid background ─────────────────────────────────────────── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(0,180,255,0.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,180,255,0.035) 1px,transparent 1px);
+  background-size:44px 44px;pointer-events:none;z-index:0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MAIN CONTENT (hidden until loader exits)
+══════════════════════════════════════════════════════════════ */
+#main{
+  position:relative;z-index:1;
+  width:100%;max-width:720px;
+  margin:0 auto;
+  padding:30px 20px 28px;
+  display:flex;flex-direction:column;
+  align-items:center;gap:22px;
+  min-height:100vh;justify-content:center;
+}
+
+/* Brand */
+.brand-name{
+  font-family:Arial Black,Arial,Helvetica,sans-serif;
+  font-size:clamp(26px,5.5vw,42px);
+  white-space:nowrap;font-weight:900;letter-spacing:0.1em;
+  color:#e2eaf5;line-height:1;
+}
+.brand-name .ac{color:#00CFFF;}
+.brand-sub{font-size:13px;color:#3a4e6a;letter-spacing:0.14em;margin-top:10px;}
+
+/* Three-dot pulse indicator — no rotation, no stutter */
+.ind-wrap{display:flex;align-items:center;justify-content:center;gap:14px;height:60px;flex-shrink:0;}
+.ind-dot{width:14px;height:14px;border-radius:50%;background:#00CFFF;
+  box-shadow:0 0 10px #00CFFF,0 0 22px rgba(0,207,255,0.4);
+  animation:ind-bounce 1.2s ease-in-out infinite;
+  transition:background 0.4s,box-shadow 0.4s;}
+.ind-dot:nth-child(1){animation-delay:0s;}
+.ind-dot:nth-child(2){animation-delay:0.2s;}
+.ind-dot:nth-child(3){animation-delay:0.4s;}
+@keyframes ind-bounce{
+  0%,80%,100%{transform:scale(0.6);opacity:0.4;}
+  40%{transform:scale(1.2);opacity:1;}
+}
+
+/* FW badge */
+.fw-badge{
+  padding:7px 18px;border:1px solid rgba(0,207,255,0.18);
+  border-radius:20px;font-size:11px;color:#3e5878;letter-spacing:0.08em;
+}
+.fw-badge span{color:#00CFFF;}
+
+/* Status box */
+.status-box{
+  width:100%;background:rgba(5,12,28,0.85);
+  border:1px solid rgba(0,207,255,0.14);border-radius:6px;overflow:hidden;
+}
+.status-hdr{
+  padding:8px 14px;border-bottom:1px solid rgba(0,207,255,0.1);
+  display:flex;align-items:center;gap:8px;
+  font-size:10px;color:#2a3a55;letter-spacing:0.12em;
+}
+#sdot{
+  width:6px;height:6px;border-radius:50%;
+  background:#00CFFF;box-shadow:0 0 6px #00CFFF;
+  animation:dot-pulse 1.5s ease-in-out infinite alternate;
+  transition:background 0.5s,box-shadow 0.5s;flex-shrink:0;
+}
+#msgs{
+  display:block;padding:22px 16px;
+  font-family:'Courier New',Courier,monospace;
+  font-size:clamp(13px,3.5vw,17px);
+  color:#00CFFF;text-align:center;line-height:1.6;
+  text-shadow:0 0 12px rgba(0,207,255,0.35);
+  transition:color 0.5s,text-shadow 0.5s;
+}
+
+/* Credits */
+.credits{font-size:11px;color:#1e2d42;letter-spacing:0.05em;line-height:2.2;}
+
+/* ── State colours ────────────────────────────────────────── */
+body.s-ok .ind-dot{background:#22D68A;box-shadow:0 0 10px #22D68A,0 0 22px rgba(34,214,138,0.4);animation:none;transform:scale(1);opacity:1;}
+body.s-ok #sdot{background:#22D68A;box-shadow:0 0 6px #22D68A;}
+body.s-ok #msgs{color:#22D68A;text-shadow:0 0 12px rgba(34,214,138,0.35);}
+body.s-err .ind-dot{background:#F05050;box-shadow:0 0 10px #F05050;animation:none;transform:scale(1);opacity:1;}
+body.s-err #sdot{background:#F05050;box-shadow:0 0 6px #F05050;animation:none;}
+body.s-err #msgs{color:#F05050;text-shadow:0 0 12px rgba(240,80,80,0.3);}
+
+
+/* ══ SUCCESS / FAIL OVERLAYS ══════════════════════════════════ */
+.jb-overlay{
+  position:fixed;inset:0;z-index:8888;
+  background:rgba(4,6,14,1);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  opacity:0;visibility:hidden;
+  transition:opacity 0.5s ease,visibility 0.5s ease;
+  pointer-events:none;
+}
+.jb-overlay.show{opacity:1;visibility:visible;pointer-events:auto;}
+
+/* Icon ring */
+.jb-icon-ring{
+  width:110px;height:110px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  animation:icon-ring-in 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  opacity:0;
+}
+#jb-success .jb-icon-ring{
+  border:2px solid #22D68A;
+  box-shadow:0 0 32px rgba(34,214,138,0.35),inset 0 0 24px rgba(34,214,138,0.08);
+}
+#jb-fail .jb-icon-ring{
+  border:2px solid #F05050;
+  box-shadow:0 0 32px rgba(240,80,80,0.35),inset 0 0 24px rgba(240,80,80,0.08);
+  animation:icon-ring-in 0.4s ease forwards, shake 0.5s ease 0.4s;
+}
+
+/* SVG icons */
+.jb-check,.jb-x1,.jb-x2{stroke-linecap:round;stroke-linejoin:round;fill:none;stroke-width:3;}
+.jb-check{stroke:#22D68A;stroke-dasharray:55;stroke-dashoffset:55;animation:draw-stroke 0.5s ease 0.45s forwards;}
+.jb-x1{stroke:#F05050;stroke-dasharray:30;stroke-dashoffset:30;animation:draw-stroke 0.35s ease 0.35s forwards;}
+.jb-x2{stroke:#F05050;stroke-dasharray:30;stroke-dashoffset:30;animation:draw-stroke 0.35s ease 0.55s forwards;}
+
+/* Title */
+.jb-title{
+  font-family:Arial Black,Arial,Helvetica,sans-serif;
+  font-size:clamp(18px,4.5vw,30px);white-space:nowrap;letter-spacing:0.1em;
+  opacity:0;animation:slide-up 0.45s ease forwards;
+}
+#jb-success .jb-title{color:#22D68A;text-shadow:0 0 22px rgba(34,214,138,0.45);animation-delay:0.6s;}
+#jb-fail    .jb-title{color:#F05050;text-shadow:0 0 22px rgba(240,80,80,0.45);animation-delay:0.55s;}
+
+/* Sub */
+.jb-sub{
+  font-size:12px;letter-spacing:0.1em;line-height:1.7;
+  opacity:0;animation:slide-up 0.45s ease forwards;
+}
+#jb-success .jb-sub{color:#2e7a5e;animation-delay:0.78s;}
+#jb-fail    .jb-sub{color:#7a3030;animation-delay:0.72s;}
+
+/* Dismiss hint */
+.jb-dismiss{
+  margin-top:8px;font-size:10px;letter-spacing:0.1em;
+  opacity:0;animation:slide-up 0.45s ease forwards;cursor:pointer;
+  border:1px solid rgba(255,255,255,0.08);padding:6px 18px;border-radius:20px;
+  transition:background 0.2s;
+}
+.jb-dismiss:hover{background:rgba(255,255,255,0.05);}
+#jb-success .jb-dismiss{color:#1e5c44;animation-delay:0.95s;}
+#jb-fail    .jb-dismiss{color:#5c1e1e;animation-delay:0.9s;}
+
+/* Keyframes */
+@keyframes icon-ring-in{from{opacity:0;transform:scale(0.5);}to{opacity:1;transform:scale(1);}}
+@keyframes draw-stroke{to{stroke-dashoffset:0;}}
+@keyframes slide-up{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  20%,60%{transform:translateX(-10px);}
+  40%,80%{transform:translateX(10px);}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ ORIGINAL EXPLOIT SCRIPT — NOT MODIFIED ═══════════════════ -->
+<script>
+var uaFull = navigator.userAgent;
+var match = uaFull.match(/PlayStation 4[ /]([\d.]+)/i);
+var isPS4 = match !== null;
+var fwVersion = isPS4 ? match[1] : "Unknown";
+var fwNum = parseFloat(fwVersion);
+
+function onScriptError() {
+    msgs.innerHTML = "Content not Found! - Clear Browser Data and Re-Install Cache ...";
+}
+
+if (!isPS4) {
+    document.addEventListener("DOMContentLoaded", () => {
+        msgs.innerHTML = "Only for PS4 with Firmware 5.05 and 7.00 to 13.52";
+    });
+} else {
+    if (window.applicationCache.status == '0') {
+        if (fwNum == 5.05 || fwNum == 5.07) {
+            window.location.replace("cache505.html");
+        } else if (fwNum >= 7.00 && fwNum <= 8.52) {
+            window.location.replace("cache700.html");
+        } else if (fwNum >= 9.00 && fwNum <= 9.60) {
+            window.location.replace("cache900.html");
+        } else if (fwNum >= 10.00 && fwNum <= 11.02) {
+            window.location.replace("cachecss.html");
+        } else if (fwNum >= 11.50 && fwNum <= 13.52) {
+            window.location.replace("cacheslopkit.html");
+        } else {
+            document.addEventListener("DOMContentLoaded", () => {
+                msgs.innerHTML = 'Unsupported Firmware: <span style="color: red;">' + fwVersion + '</span>';
+            });
+        }
+    } else {
+        if (fwNum == 5.05 || fwNum == 5.07) {
+            var script = document.createElement('script');
+            script.src = "505/exploit.js";
+            script.onerror = onScriptError;
+            document.head.appendChild(script);
+        }
+        else if (fwNum >= 7.00 && fwNum <= 8.52) {
+            var script = document.createElement('script');
+            script.type = 'module';
+            script.src = "700/alert.js";
+            script.onerror = onScriptError;
+            document.head.appendChild(script);
+        }
+        else if (fwNum >= 9.00 && fwNum <= 9.60) {
+            var script = document.createElement('script');
+            script.type = 'module';
+            script.src = "900/alert.js";
+            script.onerror = onScriptError;
+            document.head.appendChild(script);
+        }
+        else if (fwNum >= 10.00 && fwNum <= 11.02) {
+            var script = document.createElement('script');
+            script.src = "css/main.js";
+            script.onerror = onScriptError;
+            script.onload = function () {
+                setTimeout(function () {
+                    doJb();
+                }, 500);
+            };
+            document.head.appendChild(script);
+        }
+        else if (fwNum >= 11.50 && fwNum <= 12.02) {
+            var script = document.createElement('script');
+            script.type = 'module';
+            script.src = "slopkit/chain_lapse.js";
+            script.onerror = onScriptError;
+            document.head.appendChild(script);
+        }
+        else if (fwNum >= 12.50 && fwNum <= 13.00) {
+            var script = document.createElement('script');
+            script.type = 'module';
+            script.src = "slopkit/chain_poops.js";
+            script.onerror = onScriptError;
+            document.head.appendChild(script);
+        }
+        else if (fwNum >= 13.02 && fwNum <= 13.52) {
+            var script = document.createElement('script');
+            script.type = 'module';
+            script.src = "slopkit/jb.js?v=19";
+            script.onerror = onScriptError;
+            document.head.appendChild(script);
+        }
+    }
+}
+</script>
+<!-- ═══ END ORIGINAL EXPLOIT SCRIPT ══════════════════════════════ -->
+
+
+<!-- ══ MAIN CONTENT ════════════════════════════════════════════ -->
+<div id="main">
+
+  <div>
+    <div class="brand-name">SUPERSONIC <span class="ac">STORE</span></div>
+    <div class="brand-sub">PS4 &middot; GOLDHEN v2.4b18.12 &middot; FW 5.05 &mdash; 13.52</div>
+  </div>
+
+  <div class="ind-wrap" aria-hidden="true">
+    <div class="ind-dot"></div>
+    <div class="ind-dot"></div>
+    <div class="ind-dot"></div>
+  </div>
+
+  <div class="fw-badge" id="fw-badge">Detecting firmware&hellip;</div>
+
+  <div class="status-box">
+    <div class="status-hdr"><div id="sdot"></div>SYSTEM STATUS</div>
+    <h1 id="msgs">Loading GoldHEN v2.4b18.12...TUNGGU30DETIK</h1>
+  </div>
+
+  <div class="credits">Special honour to all developers in the PS4 Scene</div>
+
+</div>
+
+
+<!-- ══ UI LOGIC (cosmetic only) ════════════════════════════════ -->
+<script>
+(function(){
+
+  /* Show detected firmware in the loading screen line */
+  var ldFw = document.getElementById('ld-fw');
+  if(ldFw && typeof fwVersion !== 'undefined'){
+    ldFw.textContent = isPS4 ? fwVersion : 'N/A';
+  }
+
+  /* Show detected firmware in main badge */
+  var badge = document.getElementById('fw-badge');
+  if(badge && typeof isPS4 !== 'undefined' && isPS4){
+    badge.innerHTML = 'PS4 &middot; FW <span>' + fwVersion + '</span>';
+  }
+
+  /* Watch #msgs for state changes */
+  var el = document.getElementById('msgs');
+  if(!el) return;
+  var _loaderDone = true;
+  var _successShown = false;
+  var _failShown    = false;
+
+  function showOverlay(id){
+    var ov = document.getElementById(id);
+    if(ov) ov.classList.add('show');
+  }
+
+  function sync(){
+    var t = el.textContent + el.innerHTML;
+    var tl = t.toLowerCase();
+    document.body.classList.remove('s-ok','s-err');
+
+    var isStillLoading = tl.indexOf('please wait')!==-1||(tl.indexOf('loading')!==-1&&tl.indexOf('loaded')===-1);
+    var isOk  = !isStillLoading&&(tl.indexOf('\u2714')!==-1||tl.indexOf('success')!==-1||tl.indexOf('close')!==-1||tl.indexOf('re-open')!==-1||tl.indexOf('loaded')!==-1||tl.indexOf('enabled')!==-1);
+    var isErr = !isOk&&(tl.indexOf('error')!==-1||tl.indexOf('fail')!==-1||tl.indexOf('not found')!==-1||tl.indexOf('unsupported')!==-1);
+
+    if(isOk){
+      document.body.classList.add('s-ok');
+      if(!_successShown&&_loaderDone){
+        _successShown=true;
+        setTimeout(function(){
+          var m=document.getElementById('msgs');
+          if(m) m.style.visibility='hidden';
+          showOverlay('jb-success');
+        }, 300);
+      }
+    } else if(isErr){
+      document.body.classList.add('s-err');
+      if(!_failShown&&_loaderDone){
+        _failShown=true;
+        setTimeout(function(){ showOverlay('jb-fail'); }, 300);
+      }
+    }
+  }
+  sync();
+  new MutationObserver(sync).observe(el,{childList:true,subtree:true,characterData:true});
+
+})();
+</script>
+
+
+<!-- ══ SUCCESS OVERLAY ══════════════════════════════════════════ -->
+<div id="jb-success" class="jb-overlay">
+  <div class="jb-icon-ring">
+    <svg width="56" height="56" viewBox="0 0 56 56">
+      <polyline class="jb-check" points="12,28 23,39 44,17"/>
+    </svg>
+  </div>
+  <div class="jb-title" id="jb-success-title">SELAMAT BERMAIN</div>
+  <div class="jb-sub"  id="jb-success-sub">GoldHEN is now active &mdash; press the <span style="color:#e2eaf5;">PS Button</span> to go to the home screen and enjoy your games</div>
+  <div class="jb-dismiss" onclick="document.getElementById('jb-success').classList.remove('show')">DISMISS</div>
+</div>
+
+<!-- ══ FAIL OVERLAY ═════════════════════════════════════════════ -->
+<div id="jb-fail" class="jb-overlay">
+  <div class="jb-icon-ring">
+    <svg width="56" height="56" viewBox="0 0 56 56">
+      <line class="jb-x1" x1="16" y1="16" x2="40" y2="40"/>
+      <line class="jb-x2" x1="40" y1="16" x2="16" y2="40"/>
+    </svg>
+  </div>
+  <div class="jb-title" id="jb-fail-title">JAILBREAK GAGAL</div>
+  <div class="jb-sub"  id="jb-fail-sub">TUTU DAN ULANG KEMBALI</div>
+  <div class="jb-dismiss" onclick="document.getElementById('jb-fail').classList.remove('show')">DISMISS</div>
+</div>
+
+</body>
+</html>
